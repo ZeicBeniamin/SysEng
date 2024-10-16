@@ -51,7 +51,9 @@ def spawn_arrays(dis_array, vel_array, multiplicity=1, noise_mean=0, noise_stdde
 dis_arr = np.load("quake_dis2.npy")
 vel_arr = np.load("quake_vel2.npy")
 
-noisy_dis, noisy_vel, noisy_tim = spawn_arrays(dis_arr, vel_arr, multiplicity=10, noise_mean=0, dis_nscale=1e-7, vel_nscale=0)
+working_sensors = 10
+
+noisy_dis, noisy_vel, noisy_tim = spawn_arrays(dis_arr, vel_arr, multiplicity=working_sensors, noise_mean=0, dis_nscale=1e-7, vel_nscale=0)
 
 lowerlim = 2750
 upperlim = 17500
@@ -66,7 +68,7 @@ for i in range(noisy_dis.shape[1]):
 # for i in range(1):
     make_plot(noisy_tim[lowerlim:upperlim, i] , noisy_dis[lowerlim:upperlim, i], styleno=i, label=f"W{i}")
 ax.legend()
-plt.title("Noisy measurements")
+plt.title(f"Noisy measurements - {working_sensors} sensors")
 plt.ylabel("meters")
 plt.xlabel("microseconds")
 
@@ -132,7 +134,7 @@ for i in range(upperlim * 10):
 ax = fig.add_subplot(2, 1, 2)
 ax.legend()
 plt.title("Estimated signal")
-make_plot_special(estimated_state[2, lowerlim*10:upperlim*10], estimated_state[0, lowerlim*10:upperlim*10], plot_style="g-", label=f"Estimation")
+make_plot_special(estimated_state[2, lowerlim*working_sensors:upperlim*working_sensors], estimated_state[0, lowerlim*working_sensors:upperlim*working_sensors], plot_style="g-", label=f"Estimation")
 make_plot_special(noisy_tim[lowerlim:upperlim, 1], dis_arr[lowerlim:upperlim], plot_style="r-", label=f"Original")
 plt.ylabel("meters")
 plt.xlabel("microseconds")
