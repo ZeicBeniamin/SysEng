@@ -22,14 +22,17 @@ plot_style = [
     f"k|",
     f"g_",
     f"c|",
-    f"m_",
+    f"m1",
     f"yx ",
-    f"r+",
-    f"b.",   
+    f"r1",
+    f"b.",
 ]
 
 def make_plot(x, y, styleno=0, label=""):
     ax.plot(x, y, plot_style[styleno % len(plot_style)], label=label)
+
+def make_plot_special(x, y, plot_style, label=""):
+    ax.plot(x, y, plot_style, label=label)
     
 def spawn_arrays(dis_array, vel_array, multiplicity=1, noise_mean=0, noise_stddev=0.5, dis_nscale=1, vel_nscale=1):
     shape = dis_array.shape[0]
@@ -52,17 +55,20 @@ noisy_dis, noisy_vel, noisy_tim = spawn_arrays(dis_arr, vel_arr, multiplicity=10
 
 lowerlim = 2750
 upperlim = 17500
+lowerlim = 6000
+upperlim = 8000
 # upperlim = 217500
 
 fig = plt.figure()
 ax = fig.add_subplot(2, 1, 1)
+
+for i in range(noisy_dis.shape[1]):
+# for i in range(1):
+    make_plot(noisy_tim[lowerlim:upperlim, i] , noisy_dis[lowerlim:upperlim, i], styleno=i, label=f"W{i}")
 ax.legend()
+plt.title("Noisy measurements")
 plt.ylabel("meters")
 plt.xlabel("microseconds")
-
-# for i in range(noisy_dis.shape[1]):
-for i in range(1):
-    make_plot(noisy_tim[lowerlim:upperlim, i] , noisy_dis[lowerlim:upperlim, i], styleno=i, label=f"W{i}")
 
 # ax = fig.add_subplot(2, 1, 2)
 # plt.ylabel("meters/second")
@@ -75,27 +81,61 @@ for i in range(1):
 # plt.title("Displacement - noisy readings")
 # plt.show()
 
-displ = noisy_dis[:,1]
-veloc = noisy_vel[:,1]
-timer = noisy_tim[:,1]
+# displ = noisy_dis[:,1]
+# veloc = noisy_vel[:,1]
+# timer = noisy_tim[:,1]
 
-estimated_state = []
+# noisy_dis - N, 10           10, N           (1, N
+# niosy_tim - N, 10  =>>>>    10, N  =>>>>>    1, N            === > (3, N), (3, N), ... , (3, N) => sort (3,:) 
+# noisy_vel - N, 10           10, N            1, N) // x10 x 3
 
-for i in range(lowerlim, upperlim):
+reshaped = np.array([[],[],[]])
+# reshaped = np.expand_dims(reshaped, axis=0)
+# reshaped = np.expand_dims(reshaped, axis=0)
+
+for i in range(noisy_tim.shape[1]):
+    newvec = np.concatenate(
+        (np.expand_dims(noisy_dis[:,i], axis=0),
+        np.expand_dims(noisy_vel[:,i], axis=0),
+        np.expand_dims(noisy_tim[:,i], axis=0)),
+
+    )
+    reshaped = np.concatenate((reshaped, newvec), axis=1)
+
+sort_idxes = np.argsort(reshaped)
+
+reshaped = reshaped[:,sort_idxes[2, :]]
+
+ax2 = 1e-7
+lkf.set_ax2(ax2)
+R_enc = np.array(
+        [[1e-6, 0],
+        [0, 1e-2]], dtype=np.float32
+    )
+lkf.set_R_enc(R_enc)
+
+estimated_state = np.zeros((3, reshaped.shape[1]))
+for i in range(upperlim * 10):
     measurement = np.array([
-        [displ[i]], 
-        [veloc[i]]
+        [reshaped[0, i]], 
+        [reshaped[1, i]]
     ])
-    time = timer[i]
+    time = reshaped[2, i]
 
     # print(f"Feeding\n {measurement} with time {time}")
     lkf.update_enc_imu(measurement, time=time)
     
-    estimated_state.append(lkf.get_state())
+    estimated_state[0, i] = lkf.out_x[0, 0]
+    estimated_state[1, i] = lkf.out_x[1, 0]
+    estimated_state[2, i] = time
 
-est = np.array(estimated_state)
-
-make_plot(noisy_tim[lowerlim:upperlim, 1], est[:,0,0] * 0.07, styleno=3, label=f"Estimation")
+ax = fig.add_subplot(2, 1, 2)
+ax.legend()
+plt.title("Estimated signal")
+make_plot_special(estimated_state[2, lowerlim*10:upperlim*10], estimated_state[0, lowerlim*10:upperlim*10], plot_style="g-", label=f"Estimation")
+make_plot_special(noisy_tim[lowerlim:upperlim, 1], dis_arr[lowerlim:upperlim], plot_style="r-", label=f"Original")
+plt.ylabel("meters")
+plt.xlabel("microseconds")
 
 plt.legend()
 plt.show()

@@ -102,14 +102,14 @@ class LinearKalmanFilterPosVel:
             )
 
         # Squared acceleration noises in each direction
-        self.ax2 = 1
+        self.ax2 = 1e-5
         # self.ay2 = 1
         # Identity matrix
         # Measurement uncertainty - encoder & IMU
         # TODO: 2x2 - previously used for vx and vy, now used for px, vx
         self.R_enc = np.array(
-            [[1, 0],
-             [0, 1]], dtype=np.float32
+            [[1e-5, 0],
+             [0, 1e-5]], dtype=np.float32
         )
 
         # # Measurement uncertainty - GPS
@@ -164,12 +164,12 @@ class LinearKalmanFilterPosVel:
     def set_ax2(self, ax2):
         self.ax2 = ax2
 
-    def set_ay2(self, ay2):
-        self.ay2 = ay2
+    # def set_ay2(self, ay2):
+    #     self.ay2 = ay2
     
-    def set_acc_noise(self, ax2, ay2):
-        self.ax2 = ax2
-        self.ay2 = ay2
+    # def set_acc_noise(self, ax2, ay2):
+    #     self.ax2 = ax2
+    #     self.ay2 = ay2
 
     def update_enc_imu(self, measurement, time):
         """
