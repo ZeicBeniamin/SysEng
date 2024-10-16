@@ -27,35 +27,46 @@ plot_style = [
 def make_plot(x, y, styleno=0, label=""):
     ax.plot(x, y, plot_style[styleno % len(plot_style)], label=label)
     
-def spawn_arrays(array, multiplicity=1, noise_mean=0, noise_stddev=0.5, scale=1):
-    shape = array.shape[0]
+def spawn_arrays(dis_array, vel_array, multiplicity=1, noise_mean=0, noise_stddev=0.5, dis_nscale=1, vel_nscale=1):
+    shape = dis_array.shape[0]
     
     time_scale = 1e-1
     noise = np.random.normal(noise_mean, noise_stddev, size=(shape, multiplicity))
     time_noise = np.random.normal(size=(shape, multiplicity))/3 * time_scale
 
-    noisy = np.expand_dims(array, axis=1) + noise * scale * np.random.uniform(1, 1.5)
-    noisy_time = np.expand_dims(np.arange(array.shape[0]), axis=1) + time_noise
+    noisy_dis = np.expand_dims(dis_array, axis=1) + noise * dis_nscale * np.random.uniform(1, 1.5)
+    noisy_vel = np.expand_dims(vel_array, axis=1) + noise * vel_nscale * np.random.uniform(1, 1.5)
+    noisy_time = np.expand_dims(np.arange(dis_array.shape[0]), axis=1) + time_noise
 
-    return noisy, noisy_time
+    return noisy_dis, noisy_vel, noisy_time
 
 
-arr = np.load("quake2.npy")
-noisy, noisy_time = spawn_arrays(arr, multiplicity=10, noise_mean=0, scale=1e-7)
+dis_arr = np.load("quake_dis2.npy")
+vel_arr = np.load("quake_vel2.npy")
+
+noisy_dis, noisy_vel, noisy_time = spawn_arrays(dis_arr, vel_arr, multiplicity=10, noise_mean=0, dis_nscale=1e-7, vel_nscale=0)
 
 lowerlim = 2750
 upperlim = 17500
+# upperlim = 217500
 
 fig = plt.figure()
-ax = fig.add_subplot(1, 1, 1)
-
-for i in range(noisy.shape[1]):
-    make_plot(noisy_time[lowerlim:upperlim, i] , noisy[lowerlim:upperlim, i], styleno=i, label=f"W{i}")
-
-# ax.plot(x, y, plot_style[styleno])
-plt.legend()
+ax = fig.add_subplot(2, 1, 1)
+ax.legend()
 plt.ylabel("meters")
 plt.xlabel("microseconds")
-plt.title("Displacement - noisy readings")
+
+for i in range(noisy_dis.shape[1]):
+    make_plot(noisy_time[lowerlim:upperlim, i] , noisy_dis[lowerlim:upperlim, i], styleno=i, label=f"W{i}")
+
+ax = fig.add_subplot(2, 1, 2)
+plt.ylabel("meters/second")
+plt.xlabel("microseconds")
+
+for i in range(noisy_vel.shape[1]):
+    make_plot(noisy_time[lowerlim:upperlim, i] , noisy_vel[lowerlim:upperlim, i], styleno=i, label=f"W{i}")
+
+# ax.plot(x, y, plot_style[styleno])
+# plt.title("Displacement - noisy readings")
 plt.show()
 
