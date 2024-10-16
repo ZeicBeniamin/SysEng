@@ -58,6 +58,9 @@ def make_stream(dataset):
     return stream
 
 def get_noise(count, all=False):
+    client = None
+    inventory = None
+    
     n = 1
     noise_csv_file = f"../chunk{n}/chunk{n}.csv"
     noise_file = f"../chunk{n}/chunk{n}.hdf5"
@@ -89,14 +92,15 @@ def get_noise(count, all=False):
         
         print(f"Processing {evi} with index {c}")
 
-        client = Client("IRIS")
-        inventory = client.get_stations(network=dataset.attrs['network_code'],
-                                        station=dataset.attrs['receiver_code'],
-                                        starttime=UTCDateTime(dataset.attrs['trace_start_time']),
-                                        endtime=UTCDateTime(dataset.attrs['trace_start_time']) + 120,
-                                        loc="*", 
-                                        channel="*",
-                                        level="response")
+        if client == None:
+            client = Client("IRIS")
+            inventory = client.get_stations(network=dataset.attrs['network_code'],
+                                            station=dataset.attrs['receiver_code'],
+                                            starttime=UTCDateTime(dataset.attrs['trace_start_time']),
+                                            endtime=UTCDateTime(dataset.attrs['trace_start_time']) + 120,
+                                            loc="*", 
+                                            channel="*",
+                                            level="response")
         
         # converting into displacement
         st = make_stream(dataset)
@@ -141,6 +145,10 @@ if __name__ == '__main__':
 
     time = []
     dip = []
+    vel = []
+
+    client = None
+    inventory = None
 
     # reading one sample trace from STEAD
     dtfl = h5py.File(file_name, 'r')
@@ -149,46 +157,48 @@ if __name__ == '__main__':
 
         print(f"Processing trace {trace}")
         # convering hdf5 dataset into obspy sream
-        st = make_stream(dataset)
+        st_disp = make_stream(dataset)
         
         # ploting the verical component of the raw data
         # make_plot(st[2], title='Raw Data', ylab='counts')
 
         # downloading the instrument response of the station from IRIS
-        client = Client("IRIS")
-        inventory = client.get_stations(network=dataset.attrs['network_code'],
-                                        station=dataset.attrs['receiver_code'],
-                                        starttime=UTCDateTime(dataset.attrs['trace_start_time']),
-                                        endtime=UTCDateTime(dataset.attrs['trace_start_time']) + 120,
-                                        loc="*", 
-                                        channel="*",
-                                        level="response")  
+        if client == None:
+            client = Client("IRIS")
+            inventory = client.get_stations(network=dataset.attrs['network_code'],
+                                            station=dataset.attrs['receiver_code'],
+                                            starttime=UTCDateTime(dataset.attrs['trace_start_time']),
+                                            endtime=UTCDateTime(dataset.attrs['trace_start_time']) + 120,
+                                            loc="*", 
+                                            channel="*",
+                                            level="response")  
 
         # converting into displacement
         st = make_stream(dataset)
-        st = st.remove_response(inventory=inventory, output="DISP", plot=False)
+        st_disp = st.remove_response(inventory=inventory, output="DISP", plot=False)
+        tr = st_disp[2]
+        dip.append(tr.data)
+        
+
+        st = make_stream(dataset)
+        st_vel = st.remove_response(inventory=inventory, output="VEL", plot=False)
+        tr_vel = st_vel[2]
+        vel.append(tr_vel.data)
 
         # ploting the verical component
         # make_plot(st[2], title='Displacement', ylab='meters')
-        tr = st[2]
 
         starttime = UTCDateTime(dataset.attrs['trace_start_time'])
         time.append(tr.times() + starttime.timestamp)
-        dip.append(tr.data)
-
-    npdata = np.array([],dtype=np.float64)
+        
+    np_dis = np.array([],dtype=np.float64)
+    np_vel = np.array([],dtype=np.float64)
     
     a = get_noise(5)
     b = get_noise(6)
     c = get_noise(7)
     d = get_noise(8)
     e = get_noise(9)
-    # get_noise(10),
-    # get_noise(11),
-    # get_noise(1),
-    # get_noise(2),
-    # get_noise(3),
-    # get_noise(4),
 
     noise = [
         a,
@@ -207,7 +217,7 @@ if __name__ == '__main__':
         a    
     ]
     
-    npdata = np.concatenate( (
+    np_dis = np.concatenate( (
         noise[1],
         dip[3],
         noise[2],
@@ -231,7 +241,32 @@ if __name__ == '__main__':
         noise[3],
     ))
 
-    np.save(file="./quake2.npy", arr=npdata, allow_pickle=False)
+    np_vel = np.concatenate( (
+        noise[1],
+        vel[3],
+        noise[2],
+        noise[3],
+        vel[5],
+        noise[4],
+        noise[5],
+        vel[2],
+        vel[4],
+        noise[6],
+        noise[7],
+        noise[3],
+        noise[1],
+        noise[1],
+        noise[8],
+        noise[9],
+        noise[10],
+        vel[6],
+        noise[1],
+        noise[5],
+        noise[3],
+    ))
+
+    np.save(file="./quake_dis2.npy", arr=np_dis, allow_pickle=False)
+    np.save(file="./quake_vel2.npy", arr=np_vel, allow_pickle=False)
 
     print("Bye")
     print("")
