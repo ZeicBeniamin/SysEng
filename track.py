@@ -87,10 +87,6 @@ plt.xlabel("microseconds")
 # veloc = noisy_vel[:,1]
 # timer = noisy_tim[:,1]
 
-# noisy_dis - N, 10           10, N           (1, N
-# niosy_tim - N, 10  =>>>>    10, N  =>>>>>    1, N            === > (3, N), (3, N), ... , (3, N) => sort (3,:) 
-# noisy_vel - N, 10           10, N            1, N) // x10 x 3
-
 reshaped = np.array([[],[],[]])
 # reshaped = np.expand_dims(reshaped, axis=0)
 # reshaped = np.expand_dims(reshaped, axis=0)

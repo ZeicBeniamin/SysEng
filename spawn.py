@@ -21,7 +21,7 @@ plot_style = [
     f"m_",
     f"yx ",
     f"r+",
-    f"b.",   
+    f"b-",   
 ]
 
 def make_plot(x, y, styleno=0, label=""):
@@ -44,27 +44,59 @@ def spawn_arrays(dis_array, vel_array, multiplicity=1, noise_mean=0, noise_stdde
 dis_arr = np.load("quake_dis2.npy")
 vel_arr = np.load("quake_vel2.npy")
 
-noisy_dis, noisy_vel, noisy_time = spawn_arrays(dis_arr, vel_arr, multiplicity=10, noise_mean=0, dis_nscale=1e-7, vel_nscale=0)
+multiplicity=1
+noisy_dis, noisy_vel, noisy_time = spawn_arrays(dis_arr, vel_arr, multiplicity=multiplicity, noise_mean=0, dis_nscale=0, vel_nscale=0)
 
 lowerlim = 2750
 upperlim = 17500
+
+lowerlim = 0
+upperlim = 17500000
 # upperlim = 217500
 
 fig = plt.figure()
 ax = fig.add_subplot(2, 1, 1)
+# ax.legend()
+
+for i in range(noisy_dis.shape[1]):
+    make_plot(noisy_time[lowerlim:upperlim, i] , noisy_dis[lowerlim:upperlim, i], styleno=6, label=f"Ground displacement")
+
+
 ax.legend()
 plt.ylabel("meters")
 plt.xlabel("microseconds")
 
-for i in range(noisy_dis.shape[1]):
-    make_plot(noisy_time[lowerlim:upperlim, i] , noisy_dis[lowerlim:upperlim, i], styleno=i, label=f"W{i}")
+
+abs_dis_post = np.expand_dims(np.append(np.abs(noisy_dis), 0), axis=1)
+abs_dis_pre = np.insert(np.abs(noisy_dis), 0, 0, axis=0)
+
+halves = (abs_dis_post * abs_dis_pre / 2)
+
+time_post = np.expand_dims(np.append(noisy_time, 0), axis=1)
+time_pre = np.insert(noisy_time, 0, 0, axis=0)
+
+time_delta = time_post - time_pre
+
+part_integral = halves * time_delta
+
+
+cumsum = np.cumsum(part_integral)[1:]
+
+cumsum2 = np.array([], dtype=np.float64)
+stride = 10000
+for i in range(lowerlim, upperlim, stride):
+    cumsum2 = np.append(cumsum2, np.sum(part_integral[i:i + stride]))
+
+# for i in range(lowerlim, upperlim):
+#     accum_dis[i:] += np.trapezoid(abs_dis[lowerlim:upperlim], noisy_time[lowerlim:upperlim], axis=0)
 
 ax = fig.add_subplot(2, 1, 2)
-plt.ylabel("meters/second")
-plt.xlabel("microseconds")
+# plt.ylabel("meters/second")
+# plt.xlabel("microseconds")
 
-for i in range(noisy_vel.shape[1]):
-    make_plot(noisy_time[lowerlim:upperlim, i] , noisy_vel[lowerlim:upperlim, i], styleno=i, label=f"W{i}")
+# for i in range(noisy_vel.shape[1]):
+# make_plot(noisy_time[lowerlim:upperlim, i] , cumsum[lowerlim:upperlim] , styleno=i, label=f"W{i}")
+ax.plot(cumsum2)
 
 # ax.plot(x, y, plot_style[styleno])
 # plt.title("Displacement - noisy readings")
